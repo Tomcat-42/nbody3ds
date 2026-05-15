@@ -38,28 +38,22 @@ jobs:
         with:
           name: nbody3ds
 
-      - name: Generate QR code
-        run: |
-          sudo apt-get update && sudo apt-get install -y qrencode
-          TAG="${GITHUB_REF#refs/tags/}"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/nbody3ds.3dsx"
-          qrencode -o qrcode.png -s 6 -m 2 "$URL"
-
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             nbody3ds.3dsx
             nbody3ds.smdh
-            qrcode.png
           generate_release_notes: true
 
-      - name: Prepend QR to release body
+      - name: Add QR code to release body
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq qrencode > /dev/null
           TAG="${GITHUB_REF#refs/tags/}"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/nbody3ds.3dsx"
+          QR="$(qrencode -t UTF8 -m 1 "$URL")"
           EXISTING="$(gh release view "$TAG" --json body -q .body)"
-          QR_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/qrcode.png"
-          printf '## Install via QR\n\n![QR Code](%s)\n\nScan with FBI on your 3DS to install `nbody3ds.3dsx` directly.\n\n---\n\n%s' "$QR_URL" "$EXISTING" > /tmp/body.md
+          printf '## Install via QR\n\nScan with FBI on your 3DS to install `nbody3ds.3dsx` directly.\n\n```\n%s\n```\n\n---\n\n%s' "$QR" "$EXISTING" > /tmp/body.md
           gh release edit "$TAG" --notes-file /tmp/body.md
