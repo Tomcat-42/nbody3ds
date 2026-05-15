@@ -48,11 +48,12 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq qrencode > /dev/null
-          for url in "$MAKEROM_URL" "$BANNERTOOL_URL"; do
-            wget -q "$url" -O /tmp/tool.zip
-            sudo unzip -qjo /tmp/tool.zip "*x86_64*" -d /usr/local/bin/ 2>/dev/null || \
-            sudo unzip -qo /tmp/tool.zip -d /usr/local/bin/
-          done
+          wget -q "$MAKEROM_URL" -O /tmp/makerom.zip
+          unzip -qo /tmp/makerom.zip -d /tmp/makerom
+          sudo cp /tmp/makerom/makerom /usr/local/bin/
+          wget -q "$BANNERTOOL_URL" -O /tmp/bannertool.zip
+          unzip -qo /tmp/bannertool.zip "linux-x86_64/*" -d /tmp
+          sudo cp /tmp/linux-x86_64/bannertool /usr/local/bin/
           sudo chmod +x /usr/local/bin/makerom /usr/local/bin/bannertool
 
       - name: Build CIA
