@@ -15,20 +15,43 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install CIA tools
+      - name: Build
+        run: make
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: nbody3ds
+          path: |
+            nbody3ds.3dsx
+            nbody3ds.smdh
+            nbody3ds.elf
+            assets/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: nbody3ds
+
+      - name: Install tools
         run: |
-          apt-get update -qq && apt-get install -y -qq wget unzip > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq qrencode wget unzip > /dev/null
           wget -q "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip" -O /tmp/makerom.zip
-          unzip -qo /tmp/makerom.zip -d /usr/local/bin
-          chmod +x /usr/local/bin/makerom
+          unzip -qo /tmp/makerom.zip -d /tmp/makerom
+          sudo cp /tmp/makerom/makerom /usr/local/bin/
+          sudo chmod +x /usr/local/bin/makerom
           wget -q "https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip" -O /tmp/bannertool.zip
           unzip -qo /tmp/bannertool.zip "linux-x86_64/*" -d /tmp
-          cp /tmp/linux-x86_64/bannertool /usr/local/bin/
-          chmod +x /usr/local/bin/bannertool
+          sudo cp /tmp/linux-x86_64/bannertool /usr/local/bin/
+          sudo chmod +x /usr/local/bin/bannertool
 
-      - name: Build
+      - name: Build CIA
         run: |
-          make
           bannertool makesmdh \
             -s "nbody3ds" -l "N-Body Gravitational Simulation" -p "phugen" \
             -i assets/nbody3ds.png -o nbody3ds.icn
@@ -40,30 +63,8 @@ jobs:
             -icon nbody3ds.icn \
             -banner nbody3ds.bnr
 
-      - uses: actions/upload-artifact@v5
-        with:
-          name: nbody3ds
-          path: |
-            nbody3ds.3dsx
-            nbody3ds.smdh
-            nbody3ds.cia
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/download-artifact@v5
-        with:
-          name: nbody3ds
-
       - name: Generate QR code
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq qrencode > /dev/null
           TAG="${GITHUB_REF#refs/tags/}"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/nbody3ds.cia"
           qrencode -o qrcode.png -s 6 -m 2 "$URL"
