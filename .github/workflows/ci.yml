@@ -7,24 +7,28 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  APP_NAME: nbody3ds
+  APP_TITLE: nbody3ds
+  APP_DESCRIPTION: N-Body Gravitational Simulation
+  APP_AUTHOR: phugen
+  MAKEROM_URL: https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip
+  BANNERTOOL_URL: https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
+    container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v5
-
-      - name: Build
-        run: make
-
+      - run: make
       - uses: actions/upload-artifact@v5
         with:
-          name: nbody3ds
+          name: ${{ env.APP_NAME }}
           path: |
-            nbody3ds.3dsx
-            nbody3ds.smdh
-            nbody3ds.elf
+            ${{ env.APP_NAME }}.3dsx
+            ${{ env.APP_NAME }}.smdh
+            ${{ env.APP_NAME }}.elf
             assets/
 
   release:
@@ -33,58 +37,55 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
-          name: nbody3ds
+          name: ${{ env.APP_NAME }}
 
       - name: Install tools
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq qrencode wget unzip > /dev/null
-          wget -q "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip" -O /tmp/makerom.zip
-          unzip -qo /tmp/makerom.zip -d /tmp/makerom
-          sudo cp /tmp/makerom/makerom /usr/local/bin/
-          sudo chmod +x /usr/local/bin/makerom
-          wget -q "https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip" -O /tmp/bannertool.zip
-          unzip -qo /tmp/bannertool.zip "linux-x86_64/*" -d /tmp
-          sudo cp /tmp/linux-x86_64/bannertool /usr/local/bin/
-          sudo chmod +x /usr/local/bin/bannertool
+          sudo apt-get update -qq && sudo apt-get install -y -qq qrencode > /dev/null
+          for url in "$MAKEROM_URL" "$BANNERTOOL_URL"; do
+            wget -q "$url" -O /tmp/tool.zip
+            sudo unzip -qjo /tmp/tool.zip "*x86_64*" -d /usr/local/bin/ 2>/dev/null || \
+            sudo unzip -qo /tmp/tool.zip -d /usr/local/bin/
+          done
+          sudo chmod +x /usr/local/bin/makerom /usr/local/bin/bannertool
 
       - name: Build CIA
         run: |
-          bannertool makesmdh \
-            -s "nbody3ds" -l "N-Body Gravitational Simulation" -p "phugen" \
-            -i assets/nbody3ds.png -o nbody3ds.icn
-          bannertool makebanner \
-            -i assets/banner.png -a assets/banner.wav -o nbody3ds.bnr
-          makerom -f cia -o nbody3ds.cia \
-            -rsf assets/app.rsf -target t \
-            -elf nbody3ds.elf \
-            -icon nbody3ds.icn \
-            -banner nbody3ds.bnr
+          bannertool makesmdh -s "$APP_TITLE" -l "$APP_DESCRIPTION" -p "$APP_AUTHOR" \
+            -i assets/${{ env.APP_NAME }}.png -o ${{ env.APP_NAME }}.icn
+          bannertool makebanner -i assets/banner.png -a assets/banner.wav \
+            -o ${{ env.APP_NAME }}.bnr
+          makerom -f cia -o ${{ env.APP_NAME }}.cia -rsf assets/app.rsf -target t \
+            -elf ${{ env.APP_NAME }}.elf -icon ${{ env.APP_NAME }}.icn \
+            -banner ${{ env.APP_NAME }}.bnr
 
-      - name: Generate QR code
+      - name: Generate QR and release
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/nbody3ds.cia"
-          qrencode -o qrcode.png -s 6 -m 2 "$URL"
+          CIA_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${{ env.APP_NAME }}.cia"
+          QR_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/qrcode.png"
+          qrencode -o qrcode.png -s 6 -m 2 "$CIA_URL"
 
-      - name: Create release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           files: |
-            nbody3ds.3dsx
-            nbody3ds.smdh
-            nbody3ds.cia
+            ${{ env.APP_NAME }}.3dsx
+            ${{ env.APP_NAME }}.smdh
+            ${{ env.APP_NAME }}.cia
             qrcode.png
           generate_release_notes: true
 
       - name: Add QR to release body
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          EXISTING="$(gh release view "$TAG" --json body -q .body)"
           QR_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/qrcode.png"
-          printf '## Install via QR\n\nScan with FBI on your 3DS to install `nbody3ds.cia` directly.\n\n![QR Code](%s)\n\n---\n\n%s' "$QR_URL" "$EXISTING" > /tmp/body.md
+          EXISTING="$(gh release view "$TAG" --json body -q .body)"
+          printf '## Install via QR\n\nScan with FBI to install `%s.cia` directly.\n\n![QR](%s)\n\n---\n\n%s' \
+            "${{ env.APP_NAME }}" "$QR_URL" "$EXISTING" > /tmp/body.md
           gh release edit "$TAG" --notes-file /tmp/body.md
