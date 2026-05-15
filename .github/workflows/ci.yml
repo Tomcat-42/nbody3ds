@@ -13,12 +13,12 @@ jobs:
     container:
       image: devkitpro/devkitarm:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build
         run: make
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: nbody3ds
           path: |
@@ -32,20 +32,32 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: nbody3ds
 
-      - name: Generate QR code
+      - name: Generate QR code and release body
+        id: qr
         run: |
           sudo apt-get update && sudo apt-get install -y qrencode
           TAG="${GITHUB_REF#refs/tags/}"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/nbody3ds.3dsx"
           qrencode -o qrcode.png -s 6 -m 2 "$URL"
+          QR_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/qrcode.png"
+          {
+            echo 'body<<BODY_EOF'
+            echo "## Install via QR"
+            echo ""
+            echo "![QR Code](${QR_URL})"
+            echo ""
+            echo "Scan with FBI on your 3DS to install \`nbody3ds.3dsx\` directly."
+            echo 'BODY_EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          body: ${{ steps.qr.outputs.body }}
           files: |
             nbody3ds.3dsx
             nbody3ds.smdh
