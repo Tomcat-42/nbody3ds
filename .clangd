@@ -1,0 +1,13 @@
+CompileFlags:
+  Remove:
+    - -mword-relocations
+    - -mtp=*
+    - -mtune=*
+  Add:
+    - --target=arm-none-eabi
+    - -D__3DS__
+    - -D_GNU_SOURCE
+  Compiler: clang
+
+Diagnostics:
+  UnusedIncludes: Strict
