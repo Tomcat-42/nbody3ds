@@ -5,7 +5,7 @@ BasicInfo:
 
 TitleInfo:
   Category                : Application
-  UniqueId                : 0xNBD01
+  UniqueId                : 0xF0BD1
 
 Option:
   UseOnSD                 : true
@@ -103,12 +103,19 @@ AccessControlInfo:
 
   ServiceAccessControl:
    - APT:U
+   - ac:u
    - cfg:u
+   - csnd:SND
    - dsp::DSP
    - fs:USER
    - gsp::Gpu
    - hid:USER
+   - ir:rst
+   - ir:u
+   - ir:USER
+   - ndm:u
    - ptm:u
+   - pxi:dev
 
 SystemControlInfo:
   SaveDataSize: 0KB
