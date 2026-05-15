@@ -17,12 +17,13 @@ jobs:
 
       - name: Install CIA tools
         run: |
-          apt-get update -qq && apt-get install -y -qq wget > /dev/null
-          wget -q https://github.com/3DSGuy/Project_CTR/releases/latest/download/makerom-linux-x86_64.zip -O /tmp/makerom.zip
+          apt-get update -qq && apt-get install -y -qq wget unzip > /dev/null
+          wget -q "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip" -O /tmp/makerom.zip
           unzip -qo /tmp/makerom.zip -d /usr/local/bin
           chmod +x /usr/local/bin/makerom
-          wget -q https://github.com/Steveice10/bannertool/releases/latest/download/bannertool-linux.zip -O /tmp/bannertool.zip
-          unzip -qo /tmp/bannertool.zip -d /usr/local/bin
+          wget -q "https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip" -O /tmp/bannertool.zip
+          unzip -qo /tmp/bannertool.zip "linux-x86_64/*" -d /tmp
+          cp /tmp/linux-x86_64/bannertool /usr/local/bin/
           chmod +x /usr/local/bin/bannertool
 
       - name: Build
@@ -32,9 +33,7 @@ jobs:
             -s "nbody3ds" -l "N-Body Gravitational Simulation" -p "phugen" \
             -i assets/nbody3ds.png -o nbody3ds.icn
           bannertool makebanner \
-            -i assets/nbody3ds.png -a /dev/null -o nbody3ds.bnr || \
-          bannertool makebanner \
-            -ci assets/nbody3ds.png -o nbody3ds.bnr
+            -i assets/banner.png -a assets/banner.wav -o nbody3ds.bnr
           makerom -f cia -o nbody3ds.cia \
             -rsf assets/app.rsf -target t \
             -elf nbody3ds.elf \

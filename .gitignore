@@ -1,4 +1,7 @@
 *.elf
 *.3dsx
-build/
 *.smdh
+*.cia
+*.icn
+*.bnr
+build/
